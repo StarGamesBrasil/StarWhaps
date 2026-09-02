@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StarWhaps - Admin & Polls Edition</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #0b141a; display: flex; justify-content: center; align-items: center; height: 100vh; color: #e9edef; }
+
+    #auth-screen { background-color: #111b21; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); width: 100%; max-width: 400px; text-align: center; }
+    #auth-screen h1 { color: #0088cc; margin-bottom: 5px; }
+    #auth-screen p { color: #8696a0; margin-bottom: 20px; font-size: 0.9rem; }
+
+    .tab-header { display: flex; border-bottom: 2px solid #2a3942; margin-bottom: 20px; }
+    .tab-btn { flex: 1; padding: 10px 0; background: none; border: none; font-weight: 600; color: #8696a0; cursor: pointer; }
+    .tab-btn.active { color: #0088cc; border-bottom: 2px solid #0088cc; }
+    .form-content { display: none; }
+    .form-content.active { display: block; }
+
+    .input-group { margin-bottom: 15px; text-align: left; }
+    .input-group label { display: block; margin-bottom: 5px; color: #8696a0; font-size: 0.85rem; }
+    .input-group input, .input-group select, .input-group textarea { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #2a3942; background: #202c33; color: #e9edef; outline: none; }
+
+    .btn-main { width: 100%; padding: 10px; border: none; border-radius: 8px; background-color: #0088cc; color: white; font-weight: bold; cursor: pointer; margin-top: 5px; }
+    .btn-main:hover { background-color: #006699; }
+    .btn-danger { background-color: #e63946; }
+    .btn-danger:hover { background-color: #c1121f; }
+
+    #app-container { display: none; width: 100%; max-width: 1100px; height: 92vh; background-color: #111b21; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.5); position: relative; }
+    #sidebar-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 90; }
+    #sidebar-overlay.active { display: block; }
+
+    #sidebar { position: absolute; top: 0; left: -320px; width: 320px; height: 100%; background-color: #111b21; border-right: 1px solid #2a3942; display: flex; flex-direction: column; z-index: 100; transition: left 0.3s ease; }
+    #sidebar.open { left: 0; }
+
+    .sidebar-header { padding: 15px; background-color: #202c33; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid #2a3942; }
+    .profile-card { display: flex; align-items: center; gap: 10px; }
+    .profile-avatar { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; background: #2a3942; border: 1px solid #0088cc; cursor: pointer; }
+
+    .sidebar-header-top { display: flex; justify-content: space-between; align-items: center; }
+    .btn-close-sidebar { background: none; border: none; color: #8696a0; font-size: 1.2rem; cursor: pointer; }
+
+    .section-title { padding: 10px 15px 5px; font-size: 0.8rem; color: #0088cc; text-transform: uppercase; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+    .chat-list { flex: 1; overflow-y: auto; }
+
+    .chat-item { padding: 12px 15px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; border-bottom: 1px solid #1f2c34; }
+    .chat-item:hover, .chat-item.active { background-color: #2a3942; }
+    .chat-item-main { display: flex; align-items: center; gap: 10px; }
+    .chat-item-name { font-weight: 600; font-size: 0.95rem; }
+    .badge-unread { background-color: #25d366; color: #000; font-size: 0.75rem; font-weight: bold; padding: 2px 7px; border-radius: 10px; }
+    .badge-admin { background-color: #ffb703; color: #000; font-size: 0.65rem; font-weight: bold; padding: 2px 5px; border-radius: 4px; margin-left: 5px; }
+    .badge-role { background-color: #0088cc; color: #fff; font-size: 0.65rem; font-weight: bold; padding: 2px 5px; border-radius: 4px; margin-left: 5px; }
+
+    #chat-screen { flex: 1; display: flex; flex-direction: column; background-color: #0b141a; width: 100%; }
+
+    header { background: #202c33; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2a3942; }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .btn-menu-toggle { background: none; border: none; color: #0088cc; font-size: 1.5rem; cursor: pointer; }
+    .header-info h2 { font-size: 1rem; }
+    .header-info p { font-size: 0.75rem; color: #8696a0; }
+
+    #message-area { flex: 1; padding: 16px; overflow-y: auto; background-color: #080d11; display: flex; flex-direction: column; gap: 10px; }
+
+    .message { max-width: 75%; padding: 10px 14px; border-radius: 8px; font-size: 0.9rem; word-wrap: break-word; position: relative; }
+    .message.received { background-color: #202c33; align-self: flex-start; }
+    .message.sent { background-color: #005c8a; align-self: flex-end; }
+    .message.alert { background-color: #8b0000; color: #fff; align-self: center; max-width: 90%; border: 1px solid #ff4d4d; }
+
+    .quoted-reply { background: rgba(0, 0, 0, 0.25); border-left: 3px solid #0088cc; padding: 4px 8px; border-radius: 4px; margin-bottom: 6px; font-size: 0.78rem; color: #d1d7db; }
+    .message-header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+    .msg-avatar { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
+    .username { font-size: 0.75rem; font-weight: bold; color: #38b6ff; }
+    .timestamp { font-size: 0.65rem; color: #8696a0; }
+
+    .btn-delete-msg, .btn-reply-msg { background: none; border: none; color: #8696a0; cursor: pointer; font-size: 0.75rem; margin-left: 8px; }
+    .btn-delete-msg:hover { color: #e63946; }
+    .btn-reply-msg:hover { color: #0088cc; }
+
+    .media-grid { display: flex; flex-direction: column; gap: 5px; margin-top: 5px; }
+    .media-preview { max-width: 100%; max-height: 250px; border-radius: 6px; display: block; object-fit: cover; }
+    .sticker-preview { width: 130px; height: 130px; object-fit: contain; display: block; margin-top: 4px; }
+
+    .poll-box { background: #182229; border: 1px solid #2a3942; padding: 10px; border-radius: 8px; margin-top: 5px; }
+    .poll-title { font-weight: bold; margin-bottom: 8px; color: #0088cc; font-size: 0.95rem; }
+    .poll-option-btn { width: 100%; background: #202c33; border: 1px solid #2a3942; color: #e9edef; padding: 8px; border-radius: 6px; text-align: left; margin-bottom: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+    .poll-option-btn:hover { background: #2a3942; }
+
+    #reply-preview-bar { display: none; background: #182229; border-left: 4px solid #0088cc; padding: 6px 12px; font-size: 0.8rem; justify-content: space-between; align-items: center; }
+
+    footer { background-color: #202c33; padding: 10px; display: flex; gap: 8px; align-items: center; }
+    footer input[type="text"] { flex: 1; padding: 10px; border-radius: 8px; border: none; background-color: #2a3942; color: #e9edef; outline: none; }
+
+    .btn-small { background-color: #0088cc; border: none; color: white; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.8rem; }
+    .btn-small:hover { background-color: #006699; }
+    .btn-status { background-color: #25d366; color: #000; }
+    .btn-record { background-color: #e63946; }
+    .btn-record.recording { animation: pulse 1s infinite; }
+
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 1000; }
+    .modal-content { background: #111b21; padding: 20px; border-radius: 8px; width: 450px; max-height: 85vh; overflow-y: auto; }
+
+    .sticker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+    .sticker-item { width: 100%; height: 90px; object-fit: contain; background: #202c33; border-radius: 8px; cursor: pointer; padding: 5px; }
+    .sticker-item:hover { border: 2px solid #0088cc; }
+
+    .status-item { padding: 10px 15px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; border-bottom: 1px solid #1f2c34; }
+    .status-item:hover { background-color: #202c33; }
+  </style>
+</head>
+<body>
+
+  <div id="auth-screen">
+    <h1>StarWhaps</h1>
+    <p>Painel Avançado de Comunicação</p>
+    <div class="tab-header">
+      <button class="tab-btn active" id="btn-tab-login">Entrar</button>
+      <button class="tab-btn" id="btn-tab-reg">Cadastrar</button>
+    </div>
+    <form id="login-form" class="form-content active">
+      <div class="input-group"><label>E-mail</label><input type="email" id="login-email" required></div>
+      <div class="input-group"><label>Senha</label><input type="password" id="login-pass" required></div>
+      <button type="submit" class="btn-main">Entrar</button>
+    </form>
+    <form id="register-form" class="form-content">
+      <div class="input-group"><label>Nome / Apelido</label><input type="text" id="reg-username" required></div>
+      <div class="input-group"><label>E-mail</label><input type="email" id="reg-email" required></div>
+      <div class="input-group"><label>Senha</label><input type="password" id="reg-pass" minlength="6" required></div>
+      <button type="submit" class="btn-main">Cadastrar</button>
+    </form>
+  </div>
+
+  <div id="app-container">
+    <div id="sidebar-overlay"></div>
+
+    <div id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-header-top">
+          <div class="profile-card">
+            <img id="my-profile-img" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="profile-avatar" title="Trocar foto">
+            <div>
+              <strong id="my-profile-name">Perfil</strong>
+              <span id="my-admin-badge" class="badge-admin" style="display:none;">ADMIN</span>
+            </div>
+          </div>
+          <button id="btn-close-sidebar" class="btn-close-sidebar">✕</button>
+        </div>
+        <button id="btn-open-status" class="btn-small btn-status">🟢 Status / Stories</button>
+        <button id="btn-admin-panel" class="btn-small" style="background:#ffb703; color:#000; display:none;">⚡ Painel Admin Master</button>
+      </div>
+
+      <div class="section-title">
+        <span>Canais & Grupos</span>
+        <button id="btn-open-create-group" style="background:none; border:none; color:#0088cc; font-size:1.2rem; cursor:pointer;" title="Criar Grupo">+</button>
+      </div>
+      <div class="chat-list" id="groups-list"></div>
+
+      <div class="section-title">Mensagens Diretas (DMs)</div>
+      <div class="chat-list" id="users-list"></div>
+    </div>
+
+    <div id="chat-screen">
+      <header>
+        <div class="header-left">
+          <button id="btn-menu-toggle" class="btn-menu-toggle">☰</button>
+          <div class="header-info">
+            <h2 id="chat-title">Selecione um Chat</h2>
+            <p id="chat-subtitle"></p>
+          </div>
+        </div>
+        <button id="btn-manage-group" class="btn-small" style="display:none; background:#2a3942;">⚙️ Gerenciar Grupo</button>
+      </header>
+
+      <div id="message-area"></div>
+
+      <div id="reply-preview-bar">
+        <div>
+          <small style="color:#0088cc; font-weight:bold;">Respondendo a <span id="reply-author"></span>:</small>
+          <div id="reply-text" style="color:#8696a0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width: 300px;"></div>
+        </div>
+        <button onclick="cancelReply()" style="background:none; border:none; color:#8696a0; cursor:pointer;">✕</button>
+      </div>
+
+      <footer>
+        <input type="file" id="file-input" style="display: none;" accept="image/*,video/*,.pdf,.doc,.docx,.txt" multiple>
+        <input type="file" id="avatar-input" style="display: none;" accept="image/*">
+        
+        <button id="btn-attach" class="btn-small" style="background: #2a3942;" title="Anexar Mídia">📎</button>
+        <button id="btn-poll" class="btn-small" style="background: #2a3942;" title="Criar Enquete">📊</button>
+        <button id="btn-stickers" class="btn-small" style="background: #2a3942;" title="Figurinhas">💟</button>
+        <input type="text" id="message-input" placeholder="Digite uma mensagem ou comando..." autocomplete="off">
+        <button id="btn-audio" class="btn-small btn-record" title="Gravar Áudio">🎤</button>
+        <button id="send-btn" class="btn-small">Enviar</button>
+      </footer>
+    </div>
+  </div>
+
+  <div id="admin-master-modal" class="modal">
+    <div class="modal-content">
+      <h3 style="color:#ffb703;">⚡ Painel Admin Master</h3>
+      <p style="font-size:0.85rem; color:#8696a0; margin-top:5px;">Você tem acesso irrestrito ao sistema.</p>
+      <hr style="border-color:#2a3942; margin:15px 0;">
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <button id="btn-clear-global" class="btn-main btn-danger">🗑️ Limpar Todas as Mensagens do Global</button>
+        <button onclick="closeModal('admin-master-modal')" class="btn-main" style="background:#2a3942;">Fechar Painel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="stickers-modal" class="modal">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3>💟 Figurinhas</h3>
+        <button id="btn-add-sticker" class="btn-small">+ Nova Figurinha</button>
+      </div>
+      <input type="file" id="sticker-file-input" style="display: none;" accept="image/*">
+      <div id="stickers-grid" class="sticker-grid"></div>
+      <button onclick="closeModal('stickers-modal')" class="btn-main" style="background: #2a3942; margin-top: 15px;">Fechar</button>
+    </div>
+  </div>
+
+  <div id="create-poll-modal" class="modal">
+    <div class="modal-content">
+      <h3>📊 Criar Enquete</h3>
+      <div class="input-group" style="margin-top: 10px;">
+        <label>Pergunta da Enquete</label>
+        <input type="text" id="poll-question" placeholder="Ex: Qual é o próximo mapa?">
+      </div>
+      <div class="input-group">
+        <label>Opção 1</label>
+        <input type="text" class="poll-option-input" placeholder="Opção A">
+      </div>
+      <div class="input-group">
+        <label>Opção 2</label>
+        <input type="text" class="poll-option-input" placeholder="Opção B">
+      </div>
+      <div class="input-group">
+        <label>Opção 3 (Opcional)</label>
+        <input type="text" class="poll-option-input" placeholder="Opção C">
+      </div>
+      <button id="btn-submit-poll" class="btn-main">Lançar Enquete</button>
+      <button onclick="closeModal('create-poll-modal')" class="btn-main" style="background: #2a3942; margin-top: 5px;">Cancelar</button>
+    </div>
+  </div>
+
+  <div id="status-modal" class="modal">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3>🟢 Status / Stories</h3>
+        <button id="btn-new-status" class="btn-small btn-status">+ Postar Status</button>
+      </div>
+      <div id="status-list-container"></div>
+      <button onclick="closeModal('status-modal')" class="btn-main" style="background: #2a3942; margin-top: 15px;">Fechar</button>
+    </div>
+  </div>
+
+  <div id="view-status-modal" class="modal">
+    <div class="modal-content" style="text-align: center;">
+      <div id="status-view-content"></div>
+      <button onclick="closeModal('view-status-modal')" class="btn-main" style="background: #2a3942; margin-top: 15px;">Fechar</button>
+    </div>
+  </div>
+
+  <div id="create-status-modal" class="modal">
+    <div class="modal-content">
+      <h3>Criar Novo Status</h3>
+      <div class="input-group" style="margin-top: 10px;">
+        <label>Texto</label>
+        <textarea id="status-text-input" rows="3" placeholder="O que você está pensando?"></textarea>
+      </div>
+      <div class="input-group">
+        <label>Mídia (Foto/Vídeo)</label>
+        <input type="file" id="status-file-input" accept="image/*,video/*">
+      </div>
+      <button id="btn-submit-status" class="btn-main btn-status">Publicar Status</button>
+      <button onclick="closeModal('create-status-modal')" class="btn-main" style="background: #2a3942; margin-top: 5px;">Cancelar</button>
+    </div>
+  </div>
+
+  <div id="create-group-modal" class="modal">
+    <div class="modal-content">
+      <h3>👥 Criar Novo Grupo</h3>
+      <div class="input-group" style="margin-top: 10px;">
+        <label>Nome do Grupo</label>
+        <input type="text" id="group-name-input" placeholder="Ex: Desenvolvedores">
+      </div>
+      <div class="input-group">
+        <label>Ícone do Grupo (Opcional)</label>
+        <input type="file" id="group-icon-input" accept="image/*">
+      </div>
+      <button id="btn-submit-group" class="btn-main">Criar Grupo</button>
+      <button onclick="closeModal('create-group-modal')" class="btn-main" style="background: #2a3942; margin-top: 5px;">Cancelar</button>
+    </div>
+  </div>
+
+  <div id="manage-group-modal" class="modal">
+    <div class="modal-content">
+      <h3>⚙️ Gerenciar Grupo</h3>
+      <div class="input-group" style="margin-top: 10px;">
+        <label>Alterar Nome do Grupo</label>
+        <input type="text" id="edit-group-name">
+      </div>
+      <div class="input-group">
+        <label>Alterar Foto de Ícone do Grupo</label>
+        <input type="file" id="edit-group-icon" accept="image/*">
+      </div>
+      <button id="btn-update-group" class="btn-main">Salvar Alterações</button>
+      <button id="btn-delete-group" class="btn-main btn-danger" style="margin-top: 8px;">🗑️ Excluir Grupo Permanentemente</button>
+      <button onclick="closeModal('manage-group-modal')" class="btn-main" style="background: #2a3942; margin-top: 8px;">Cancelar</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, where, onSnapshot, serverTimestamp, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const ADMIN_UID = "7yN4QIB6baQIx9IaHmkQ1TGcrsE3";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA2eovVJ8yQ2miLQLQu6tK7RUH62WSf2S0",
+      authDomain: "starwhaps.firebaseapp.com",
+      projectId: "starwhaps",
+      storageBucket: "starwhaps.firebasestorage.app",
+      messagingSenderId: "273592072305",
+      appId: "1:273592072305:web:7a866546930db45f3d83d0"
+    };
+
+    const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUser = null;
+    let userProfile = null;
+    let activeChat = { type: 'global', id: 'global', name: 'Grupo Global', createdBy: null, members: [], banned: [], muted: [], roles: {} };
+    let unsubscribeMessages = null;
+    let activeReply = null;
+
+    let attachedMediaList = [];
+    let mediaRecorder = null, audioChunks = [], isRecording = false;
+
+    const authScreen = document.getElementById("auth-screen");
+    const appContainer = document.getElementById("app-container");
+    const messageArea = document.getElementById("message-area");
+    const messageInput = document.getElementById("message-input");
+    const sidebar = document.getElementById("sidebar");
+    const sidebarOverlay = document.getElementById("sidebar-overlay");
+
+    document.getElementById("btn-menu-toggle").onclick = () => { sidebar.classList.add("open"); sidebarOverlay.classList.add("active"); };
+    document.getElementById("btn-close-sidebar").onclick = closeSidebar;
+    sidebarOverlay.onclick = closeSidebar;
+    function closeSidebar() { sidebar.classList.remove("open"); sidebarOverlay.classList.remove("active"); }
+
+    document.getElementById('btn-tab-login').onclick = () => switchTab('login');
+    document.getElementById('btn-tab-reg').onclick = () => switchTab('register');
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.form-content').forEach(f => f.classList.remove('active'));
+      if (tab === 'login') {
+        document.getElementById('btn-tab-login').classList.add('active');
+        document.getElementById('login-form').classList.add('active');
+      } else {
+        document.getElementById('btn-tab-reg').classList.add('active');
+        document.getElementById('register-form').classList.add('active');
+      }
+    }
+
+    document.getElementById('login-form').onsubmit = async (e) => {
+      e.preventDefault();
+      try {
+        const res = await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-pass').value);
+        currentUser = res.user;
+        await checkUserStatusAndInit();
+      } catch (err) { alert("Erro ao entrar: " + err.message); }
+    };
+
+    document.getElementById('register-form').onsubmit = async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('reg-username').value.trim();
+      try {
+        const res = await createUserWithEmailAndPassword(auth, document.getElementById('reg-email').value, document.getElementById('reg-pass').value);
+        currentUser = res.user;
+        await updateProfile(currentUser, { displayName: name });
+        await setDoc(doc(db, "users", currentUser.uid), {
+          uid: currentUser.uid, name: name, email: currentUser.email, photoURL: DEFAULT_AVATAR
+        }, { merge: true });
+        await checkUserStatusAndInit();
+      } catch (err) { alert("Erro ao cadastrar: " + err.message); }
+    };
+
+    async function checkUserStatusAndInit() {
+      const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+      userProfile = userDoc.exists() ? userDoc.data() : { photoURL: DEFAULT_AVATAR };
+      initApp();
+    }
+
+    function initApp() {
+      authScreen.style.display = "none";
+      appContainer.style.display = "flex";
+      document.getElementById('my-profile-name').textContent = currentUser.displayName || "Usuário";
+      document.getElementById('my-profile-img').src = userProfile.photoURL || DEFAULT_AVATAR;
+
+      if (currentUser.uid === ADMIN_UID) {
+        document.getElementById('my-admin-badge').style.display = 'inline-block';
+        const adminBtn = document.getElementById('btn-admin-panel');
+        adminBtn.style.display = 'block';
+        adminBtn.onclick = () => {
+          closeSidebar();
+          document.getElementById('admin-master-modal').style.display = 'flex';
+        };
+      }
+
+      loadUsers(); loadGroups();
+      selectChat('global', 'Grupo Global', 'global');
+    }
+
+    document.getElementById('btn-clear-global').onclick = async () => {
+      if (confirm("ATENÇÃO: Deseja APAGAR TODAS as mensagens do Grupo Global?")) {
+        const snap = await getDocs(query(collection(db, "messages"), where("chatId", "==", "global")));
+        snap.forEach(async (d) => {
+          await deleteDoc(doc(db, "messages", d.id));
+        });
+        closeModal('admin-master-modal');
+        alert("Mensagens do Global excluídas!");
+      }
+    };
+
+    document.getElementById('my-profile-img').onclick = () => document.getElementById('avatar-input').click();
+    document.getElementById('avatar-input').onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) { alert("A imagem deve ter no máximo 2MB!"); return; }
+
+      const reader = new FileReader();
+      reader.onload = async (evt) => {
+        const photoBase64 = evt.target.result;
+        document.getElementById('my-profile-img').src = photoBase64;
+        await setDoc(doc(db, "users", currentUser.uid), {
+          photoURL: photoBase64, name: currentUser.displayName || "Usuário", email: currentUser.email
+        }, { merge: true });
+        userProfile.photoURL = photoBase64;
+        alert("Foto de perfil atualizada!");
+      };
+      reader.readAsDataURL(file);
+    };
+
+    document.getElementById('btn-open-create-group').onclick = () => {
+      document.getElementById('group-name-input').value = "";
+      document.getElementById('create-group-modal').style.display = 'flex';
+    };
+
+    document.getElementById('btn-submit-group').onclick = async () => {
+      const name = document.getElementById('group-name-input').value.trim();
+      const file = document.getElementById('group-icon-input').files[0];
+      if (!name) return alert("Digite o nome do grupo!");
+
+      let iconBase64 = DEFAULT_AVATAR;
+      if (file) {
+        iconBase64 = await new Promise(res => {
+          const r = new FileReader(); r.onload = e => res(e.target.result); r.readAsDataURL(file);
+        });
+      }
+
+      await addDoc(collection(db, "groups"), {
+        name, icon: iconBase64, createdBy: currentUser.uid, createdAt: serverTimestamp(),
+        members: [currentUser.uid], banned: [], muted: [], roles: {}
+      });
+
+      closeModal('create-group-modal');
+      alert(`Grupo "${name}" criado!`);
+    };
+
+    function checkManageGroupButton() {
+      const btnManage = document.getElementById('btn-manage-group');
+      if (!activeChat) { btnManage.style.display = 'none'; return; }
+
+      const isOwner = activeChat.createdBy === currentUser.uid;
+      const isAdmin = currentUser.uid === ADMIN_UID;
+
+      if (activeChat.type === 'group' && (isOwner || isAdmin)) {
+        btnManage.style.display = 'block';
+      } else {
+        btnManage.style.display = 'none';
+      }
+    }
+
+    document.getElementById('btn-manage-group').onclick = () => {
+      document.getElementById('edit-group-name').value = activeChat.name;
+      document.getElementById('manage-group-modal').style.display = 'flex';
+    };
+
+    document.getElementById('btn-update-group').onclick = async () => {
+      const newName = document.getElementById('edit-group-name').value.trim();
+      const file = document.getElementById('edit-group-icon').files[0];
+      if (!newName) return alert("Digite um nome para o grupo!");
+
+      let updates = { name: newName };
+      if (file) {
+        updates.icon = await new Promise(res => {
+          const r = new FileReader(); r.onload = e => res(e.target.result); r.readAsDataURL(file);
+        });
+      }
+
+      await updateDoc(doc(db, "groups", activeChat.id), updates);
+      activeChat.name = newName;
+      document.getElementById('chat-title').textContent = newName;
+      closeModal('manage-group-modal');
+      alert("Grupo atualizado!");
+    };
+
+    document.getElementById('btn-delete-group').onclick = async () => {
+      if (confirm(`Tem certeza que deseja apagar o grupo "${activeChat.name}"?`)) {
+        await deleteDoc(doc(db, "groups", activeChat.id));
+        closeModal('manage-group-modal');
+        selectChat('global', 'Grupo Global', 'global');
+      }
+    };
+
+    document.getElementById('btn-poll').onclick = () => {
+      document.getElementById('create-poll-modal').style.display = 'flex';
+    };
+
+    document.getElementById('btn-submit-poll').onclick = async () => {
+      const question = document.getElementById('poll-question').value.trim();
+      const optionInputs = document.querySelectorAll('.poll-option-input');
+      const options = [];
+
+      optionInputs.forEach(input => {
+        if (input.value.trim()) options.push({ text: input.value.trim(), votes: [] });
+      });
+
+      if (!question || options.length < 2) {
+        return alert("Preencha a pergunta e no mínimo 2 opções!");
+      }
+
+      await sendCustomMessage({
+        poll: { question, options }
+      });
+
+      closeModal('create-poll-modal');
+    };
+
+    window.votePoll = async (msgId, optionIndex) => {
+      const msgRef = doc(db, "messages", msgId);
+      const msgSnap = await getDoc(msgRef);
+      if (!msgSnap.exists()) return;
+
+      const poll = msgSnap.data().poll;
+      poll.options.forEach((opt, idx) => {
+        opt.votes = opt.votes.filter(uid => uid !== currentUser.uid);
+        if (idx === optionIndex) opt.votes.push(currentUser.uid);
+      });
+
+      await updateDoc(msgRef, { poll });
+    };
+
+    document.getElementById('btn-attach').onclick = () => document.getElementById('file-input').click();
+    document.getElementById('file-input').onchange = async (e) => {
+      const files = Array.from(e.target.files);
+      if (!files.length) return;
+
+      attachedMediaList = [];
+      for (const file of files) {
+        if (file.size > 3 * 1024 * 1024) { alert(`O arquivo ${file.name} excede 3MB e foi ignorado.`); continue; }
+        const base64 = await new Promise(res => {
+          const r = new FileReader(); r.onload = evt => res(evt.target.result); r.readAsDataURL(file);
+        });
+        const type = file.type.startsWith('image/') ? 'image' : (file.type.startsWith('video/') ? 'video' : 'file');
+        attachedMediaList.push({ data: base64, type });
+      }
+      alert(`${attachedMediaList.length} arquivo(s) carregado(s)!`);
+    };
+
+    document.getElementById('btn-stickers').onclick = () => {
+      loadStickers();
+      document.getElementById('stickers-modal').style.display = 'flex';
+    };
+    document.getElementById('btn-add-sticker').onclick = () => document.getElementById('sticker-file-input').click();
+
+    document.getElementById('sticker-file-input').onchange = async (e) => {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async (evt) => {
+        await addDoc(collection(db, "stickers"), { uid: currentUser.uid, data: evt.target.result, createdAt: serverTimestamp() });
+        loadStickers();
+      };
+      reader.readAsDataURL(file);
+    };
+
+    async function loadStickers() {
+      const grid = document.getElementById('stickers-grid');
+      grid.innerHTML = "Carregando...";
+      const snapshot = await getDocs(collection(db, "stickers"));
+      grid.innerHTML = "";
+      snapshot.forEach(docSnap => {
+        const st = docSnap.data();
+        const img = document.createElement('img');
+        img.className = 'sticker-item'; img.src = st.data;
+        img.onclick = () => {
+          closeModal('stickers-modal');
+          sendCustomMessage({ mediaList: [{ data: st.data, type: 'sticker' }], text: '' });
+        };
+        grid.appendChild(img);
+      });
+    }
+
+    // GRAVAÇÃO DE ÁUDIO OTIMIZADA E MULTIPLATAFORMA
+    const btnAudio = document.getElementById('btn-audio');
+    btnAudio.onclick = async () => {
+      if (!isRecording) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          
+          let mimeType = 'audio/webm';
+          if (!MediaRecorder.isTypeSupported('audio/webm')) {
+            if (MediaRecorder.isTypeSupported('audio/mp4')) {
+              mimeType = 'audio/mp4';
+            } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
+              mimeType = 'audio/ogg';
+            } else {
+              mimeType = '';
+            }
+          }
+
+          mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+          audioChunks = [];
+
+          mediaRecorder.ondataavailable = e => {
+            if (e.data.size > 0) audioChunks.push(e.data);
+          };
+
+          mediaRecorder.onstop = () => {
+            stream.getTracks().forEach(track => track.stop());
+
+            const audioBlob = new Blob(audioChunks, { type: mimeType || 'audio/wav' });
+            const reader = new FileReader();
+            reader.onload = async (evt) => {
+              await sendCustomMessage({ mediaList: [{ data: evt.target.result, type: 'audio' }], text: '' });
+            };
+            reader.readAsDataURL(audioBlob);
+          };
+
+          mediaRecorder.start(); 
+          isRecording = true;
+          btnAudio.classList.add('recording'); 
+          btnAudio.textContent = '⏹️';
+
+        } catch (err) { 
+          console.error("Erro no microfone:", err);
+          alert("Acesso ao microfone negado ou não suportado no dispositivo."); 
+        }
+      } else {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+          mediaRecorder.stop();
+        }
+        isRecording = false;
+        btnAudio.classList.remove('recording'); 
+        btnAudio.textContent = '🎤';
+      }
+    };
+
+    function selectChat(id, name, type, createdBy = null, members = [], banned = [], muted = [], roles = {}) {
+      activeChat = { id, name, type, createdBy, members, banned, muted, roles };
+      document.getElementById('chat-title').textContent = name;
+      document.getElementById('chat-subtitle').textContent = type === 'dm' ? 'Mensagem Direta' : 'Grupo';
+      checkManageGroupButton();
+      cancelReply(); closeSidebar(); listenMessages();
+    }
+
+    function listenMessages() {
+      if (unsubscribeMessages) unsubscribeMessages();
+      messageArea.innerHTML = "";
+      let targetChatId = activeChat.id;
+      if (activeChat.type === 'dm') targetChatId = [currentUser.uid, activeChat.id].sort().join("_");
+
+      const q = query(collection(db, "messages"), where("chatId", "==", targetChatId));
+
+      unsubscribeMessages = onSnapshot(q, (snapshot) => {
+        messageArea.innerHTML = "";
+        const messages = [];
+        snapshot.forEach(docSnap => {
+          if (docSnap.exists()) messages.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        messages.sort((a, b) => (a.timestamp?.toMillis() || 0) - (b.timestamp?.toMillis() || 0));
+        messages.forEach(msg => renderMessage(msg));
+        messageArea.scrollTop = messageArea.scrollHeight;
+      });
+    }
+
+    function parseCommandInput(text) {
+      const regex = /[^\s"]+|"([^"]*)"/g;
+      const matches = [];
+      let match;
+      while ((match = regex.exec(text)) !== null) {
+        matches.push(match[1] ? match[1] : match[0]);
+      }
+      return matches;
+    }
+
+    async function handleCommand(commandText) {
+      const parsedArgs = parseCommandInput(commandText.trim());
+      const cmd = parsedArgs[0] ? parsedArgs[0].toLowerCase() : '';
+      const targetName = parsedArgs[1] || null;
+      const paramText = parsedArgs.slice(2).join(" ");
+
+      const isAdmin = currentUser.uid === ADMIN_UID;
+      const isOwner = activeChat.type === 'group' && activeChat.createdBy === currentUser.uid;
+
+      if (cmd === '!alert') {
+        if (!isOwner && !isAdmin) return alert("Você não tem permissão para enviar alertas!");
+        const alertMsg = commandText.trim().substring(7).trim();
+        if (!alertMsg) return alert("Digite o texto do alerta. Ex: !alert Atenção todos");
+        await sendCustomMessage({ text: `🚨 ALERTA: ${alertMsg}`, isAlert: true });
+        return;
+      }
+
+      let targetUser = null;
+      if (targetName) {
+        const usersSnap = await getDocs(query(collection(db, "users"), where("name", "==", targetName)));
+        if (!usersSnap.empty) {
+          targetUser = usersSnap.docs[0].data();
+        } else {
+          const allUsersSnap = await getDocs(collection(db, "users"));
+          allUsersSnap.forEach(uDoc => {
+            if (uDoc.data().name?.toLowerCase() === targetName.toLowerCase()) {
+              targetUser = uDoc.data();
+            }
+          });
+        }
+      }
+
+      if (cmd === '!delete') {
+        if (!isAdmin) return alert("Apenas o Admin Master pode deletar contas!");
+        if (!targetUser) return alert(`Usuário "${targetName}" não encontrado.`);
+
+        if (confirm(`DESEJA DELETAR PERMANENTEMENTE A CONTA DE ${targetUser.name}?`)) {
+          await deleteDoc(doc(db, "users", targetUser.uid));
+          alert(`Conta de ${targetUser.name} foi removida do banco de dados!`);
+        }
+        return;
+      }
+
+      if (cmd === '!sub') {
+        if (!isAdmin) return alert("Apenas o Admin Master pode apagar stories!");
+        if (!targetUser) return alert(`Usuário "${targetName}" não encontrado.`);
+
+        const statusesSnap = await getDocs(query(collection(db, "statuses"), where("authorId", "==", targetUser.uid)));
+        statusesSnap.forEach(async (d) => {
+          await deleteDoc(doc(db, "statuses", d.id));
+        });
+        alert(`Todos os stories de ${targetUser.name} foram deletados!`);
+        return;
+      }
+
+      if (!isOwner && !isAdmin) {
+        return alert("Você não é o dono deste grupo nem Admin Master para usar esses comandos!");
+      }
+
+      if (activeChat.type !== 'group' && !isAdmin) {
+        return alert("Estes comandos só podem ser executados dentro de grupos!");
+      }
+
+      const groupRef = activeChat.type === 'group' ? doc(db, "groups", activeChat.id) : null;
+
+      switch (cmd) {
+        case '!add':
+          if (!targetUser) return alert(`Usuário "${targetName}" não encontrado.`);
+          if (groupRef) {
+            await updateDoc(groupRef, {
+              members: arrayUnion(targetUser.uid),
+              banned: arrayRemove(targetUser.uid)
+            });
+            alert(`${targetUser.name} foi adicionado ao grupo!`);
+          }
+          break;
+
+        case '!ban':
+          if (!targetUser) return alert(`Usuário "${targetName}" não encontrado.`);
+          if (groupRef) {
+            await updateDoc(groupRef, {
+              members: arrayRemove(targetUser.uid),
+              banned: arrayUnion(targetUser.uid)
+            });
+            alert(`${targetUser.name} foi banido do grupo!`);
+          }
+          break;
+
+        case '!cale':
+          if (!targetUser) return alert(`Usuário "${targetName}" não encontrado.`);
+          if (groupRef) {
+            const isMuted = activeChat.muted && activeChat.muted.includes(targetUser.uid);
+            if (isMuted) {
+              await updateDoc(groupRef, { muted: arrayRemove(targetUser.uid) });
+              alert(`${targetUser.name} agora pode falar novamente.`);
+            } else {
+              await updateDoc(groupRef, { muted: arrayUnion(targetUser.uid) });
+              alert(`${targetUser.name} foi silenciado neste grupo!`);
+            }
+          }
+          break;
+
+        case '!cargo':
+          if (!targetUser) return alert(`Usuário "${targetName}" não encontrado.`);
+          if (!paramText) return alert('Especifique o cargo. Ex: !cargo "João Silva" Mod');
+          if (groupRef) {
+            await updateDoc(groupRef, {
+              [`roles.${targetUser.uid}`]: paramText
+            });
+            alert(`Cargo de ${targetUser.name} alterado para "${paramText}"!`);
+          }
+          break;
+
+        default:
+          alert("Comando inválido!");
+          break;
+      }
+    }
+
+    async function sendCustomMessage(customParams = {}) {
+      let chatId = activeChat.id;
+      if (activeChat.type === 'dm') chatId = [currentUser.uid, activeChat.id].sort().join("_");
+
+      const text = customParams.text ?? messageInput.value.trim();
+      const mediaList = customParams.mediaList || attachedMediaList || [];
+      const poll = customParams.poll ?? null;
+      const isAlert = customParams.isAlert || false;
+
+      if (!text && mediaList.length === 0 && !poll) return;
+
+      if (text.startsWith('!') && !customParams.isAlert) {
+        messageInput.value = "";
+        await handleCommand(text);
+        return;
+      }
+
+      if (activeChat.muted && activeChat.muted.includes(currentUser.uid)) {
+        return alert("Você foi silenciado neste grupo e não pode enviar mensagens.");
+      }
+
+      const payload = {
+        chatId, senderId: currentUser.uid, senderName: currentUser.displayName || "Usuário",
+        senderPhoto: userProfile.photoURL || DEFAULT_AVATAR, text, mediaList, poll, isAlert,
+        replyTo: activeReply, timestamp: serverTimestamp()
+      };
+
+      await addDoc(collection(db, "messages"), payload);
+      messageInput.value = ""; attachedMediaList = []; cancelReply();
+    }
+
+    document.getElementById('send-btn').onclick = () => sendCustomMessage();
+    messageInput.onkeypress = (e) => { if (e.key === 'Enter') sendCustomMessage(); };
+
+    function renderMessage(msg) {
+      const isMe = msg.senderId === currentUser.uid;
+      const isAdmin = currentUser.uid === ADMIN_UID;
+      const isGroupOwner = activeChat.createdBy === currentUser.uid;
+
+      const div = document.createElement('div');
+      div.className = `message ${msg.isAlert ? 'alert' : (isMe ? 'sent' : 'received')}`;
+
+      let replyHtml = msg.replyTo ? `
+        <div class="quoted-reply">
+          <strong>${msg.replyTo.author}</strong>: ${msg.replyTo.text || '[Mídia]'}
+        </div>` : "";
+
+      let mediaHtml = "";
+      if (msg.mediaList && msg.mediaList.length > 0) {
+        mediaHtml = `<div class="media-grid">`;
+        msg.mediaList.forEach(m => {
+          if (m.type === 'image') mediaHtml += `<img src="${m.data}" class="media-preview" loading="lazy">`;
+          else if (m.type === 'video') mediaHtml += `<video src="${m.data}" controls class="media-preview"></video>`;
+          else if (m.type === 'sticker') mediaHtml += `<img src="${m.data}" class="sticker-preview">`;
+          else if (m.type === 'audio') mediaHtml += `<audio src="${m.data}" controls style="max-width:220px;"></audio>`;
+          else mediaHtml += `<a href="${m.data}" download="arquivo" style="color:#38b6ff;">📄 Documento</a>`;
+        });
+        mediaHtml += `</div>`;
+      }
+
+      let pollHtml = "";
+      if (msg.poll) {
+        const totalVotes = msg.poll.options.reduce((acc, opt) => acc + (opt.votes ? opt.votes.length : 0), 0);
+        pollHtml = `
+          <div class="poll-box">
+            <div class="poll-title">📊 ${msg.poll.question}</div>
+            ${msg.poll.options.map((opt, idx) => {
+              const votesArr = opt.votes || [];
+              const pct = totalVotes > 0 ? Math.round((votesArr.length / totalVotes) * 100) : 0;
+              const hasVoted = votesArr.includes(currentUser.uid);
+              return `
+                <button class="poll-option-btn" onclick="votePoll('${msg.id}', ${idx})" style="${hasVoted ? 'border-color:#0088cc; background:#2a3942;' : ''}">
+                  <span>${hasVoted ? '✓ ' : ''}${opt.text} (${votesArr.length})</span>
+                  <strong style="font-size:0.75rem; color:#8696a0;">${pct}%</strong>
+                </button>`;
+            }).join('')}
+          </div>`;
+      }
+
+      const userRole = (activeChat.roles && activeChat.roles[msg.senderId]) ? activeChat.roles[msg.senderId] : null;
+
+      const time = msg.timestamp ? new Date(msg.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...';
+      const canDelete = isMe || isAdmin || isGroupOwner;
+
+      div.innerHTML = `
+        ${replyHtml}
+        <div class="message-header">
+          <img src="${msg.senderPhoto || DEFAULT_AVATAR}" class="msg-avatar">
+          <span class="username">${msg.senderName}</span>
+          ${msg.senderId === ADMIN_UID ? '<span class="badge-admin">ADMIN</span>' : ''}
+          ${userRole ? `<span class="badge-role">${userRole}</span>` : ''}
+        </div>
+        <div>${msg.text || ''}</div>
+        ${mediaHtml}
+        ${pollHtml}
+        <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 4px;">
+          <span class="timestamp">${time}</span>
+          <button class="btn-reply-msg" onclick="setReply('${msg.id}', '${msg.senderName}', '${msg.text || 'Mídia'}')">↩</button>
+          ${canDelete ? `<button class="btn-delete-msg" onclick="deleteMessage('${msg.id}')">🗑️</button>` : ''}
+        </div>
+      `;
+
+      messageArea.appendChild(div);
+    }
+
+    window.setReply = (id, author, text) => {
+      activeReply = { id, author, text };
+      document.getElementById('reply-author').textContent = author;
+      document.getElementById('reply-text').textContent = text;
+      document.getElementById('reply-preview-bar').style.display = 'flex';
+      messageInput.focus();
+    };
+
+    window.cancelReply = () => {
+      activeReply = null;
+      document.getElementById('reply-preview-bar').style.display = 'none';
+    };
+
+    window.deleteMessage = async (msgId) => {
+      if (confirm("Apagar mensagem para todos?")) await deleteDoc(doc(db, "messages", msgId));
+    };
+
+    document.getElementById('btn-open-status').onclick = () => {
+      closeSidebar(); loadStatuses();
+      document.getElementById('status-modal').style.display = 'flex';
+    };
+    document.getElementById('btn-new-status').onclick = () => {
+      closeModal('status-modal');
+      document.getElementById('create-status-modal').style.display = 'flex';
+    };
+
+    document.getElementById('btn-submit-status').onclick = async () => {
+      const text = document.getElementById('status-text-input').value.trim();
+      const file = document.getElementById('status-file-input').files[0];
+      let mediaBase64 = null, mediaType = null;
+
+      if (file) {
+        mediaBase64 = await new Promise(res => {
+          const r = new FileReader(); r.onload = e => res(e.target.result); r.readAsDataURL(file);
+        });
+        mediaType = file.type.startsWith('image/') ? 'image' : 'video';
+      }
+
+      await addDoc(collection(db, "statuses"), {
+        authorId: currentUser.uid, authorName: currentUser.displayName || "Usuário", text, media: mediaBase64, mediaType,
+        createdAt: serverTimestamp(), expiresAt: Date.now() + (24 * 60 * 60 * 1000)
+      });
+      closeModal('create-status-modal'); alert("Status publicado!");
+    };
+
+    async function loadStatuses() {
+      const container = document.getElementById('status-list-container');
+      container.innerHTML = "Carregando...";
+      const snapshot = await getDocs(collection(db, "statuses"));
+      container.innerHTML = "";
+
+      if (snapshot.empty) {
+        container.innerHTML = "<p style='color:#8696a0;'>Nenhum status no momento.</p>";
+        return;
+      }
+
+      snapshot.forEach(docSnap => {
+        const st = docSnap.data();
+        if (st.expiresAt > Date.now()) {
+          const canDeleteStatus = st.authorId === currentUser.uid || currentUser.uid === ADMIN_UID;
+          const div = document.createElement('div');
+          div.className = 'status-item';
+          div.innerHTML = `
+            <div style="flex:1;" onclick='openViewStatusModal(${JSON.stringify(st)})'>
+              <strong>${st.authorName}</strong>
+              <p style="font-size:0.8rem; color:#8696a0;">${st.text || 'Clique para visualizar'}</p>
+            </div>
+            ${canDeleteStatus ? `<button onclick="deleteStatus('${docSnap.id}')" style="background:none; border:none; color:#e63946; cursor:pointer;">🗑️</button>` : ''}
+          `;
+          container.appendChild(div);
+        }
+      });
+    }
+
+    window.openViewStatusModal = (status) => {
+      const displayArea = document.getElementById('status-view-content');
+      let mediaHtml = "";
+
+      if (status.media) {
+        if (status.mediaType === 'image') mediaHtml = `<img src="${status.media}" style="max-width:100%; max-height:350px; border-radius:8px; margin-top:10px;">`;
+        else if (status.mediaType === 'video') mediaHtml = `<video src="${status.media}" controls style="max-width:100%; max-height:350px; border-radius:8px; margin-top:10px;" autoplay></video>`;
+      }
+
+      displayArea.innerHTML = `
+        <h3 style="color:#0088cc;">${status.authorName}</h3>
+        <p style="margin-top:5px;">${status.text || ''}</p>
+        ${mediaHtml}
+      `;
+
+      closeModal('status-modal');
+      document.getElementById('view-status-modal').style.display = 'flex';
+    };
+
+    window.deleteStatus = async (statusId) => {
+      if (confirm("Apagar este status?")) {
+        await deleteDoc(doc(db, "statuses", statusId));
+        loadStatuses();
+      }
+    };
+
+    function loadUsers() {
+      onSnapshot(collection(db, "users"), snap => {
+        const list = document.getElementById('users-list'); list.innerHTML = "";
+        snap.forEach(d => {
+          const u = d.data();
+          if (u.uid !== currentUser.uid) {
+            const div = document.createElement('div');
+            div.className = 'chat-item';
+            const dmChatId = [currentUser.uid, u.uid].sort().join("_");
+            div.innerHTML = `
+              <div class="chat-item-main">
+                <img src="${u.photoURL || DEFAULT_AVATAR}" class="msg-avatar">
+                <div class="chat-item-name">${u.name} ${u.uid === ADMIN_UID ? '<span class="badge-admin">ADMIN</span>' : ''}</div>
+              </div>
+              <span class="badge-unread" id="badge-${dmChatId}" style="display:none;">0</span>
+            `;
+            div.onclick = () => selectChat(u.uid, u.name, 'dm');
+            list.appendChild(div);
+
+            onSnapshot(query(collection(db, "messages"), where("chatId", "==", dmChatId)), msgSnap => {
+              const badge = document.getElementById(`badge-${dmChatId}`);
+              if (badge && activeChat.id !== u.uid) {
+                const count = msgSnap.size;
+                if (count > 0) { badge.textContent = count; badge.style.display = 'inline-block'; }
+              }
+            });
+          }
+        });
+      });
+    }
+
+    function loadGroups() {
+      onSnapshot(collection(db, "groups"), snapshot => {
+        const list = document.getElementById('groups-list'); list.innerHTML = "";
+
+        const globalDiv = document.createElement('div');
+        globalDiv.className = 'chat-item';
+        globalDiv.innerHTML = `<div class="chat-item-name">🌐 Grupo Global</div>`;
+        globalDiv.onclick = () => selectChat('global', 'Grupo Global', 'global');
+        list.appendChild(globalDiv);
+
+        snapshot.forEach(docSnap => {
+          const group = docSnap.data();
+          const groupId = docSnap.id;
+
+          if (group.banned && group.banned.includes(currentUser.uid)) return;
+
+          const div = document.createElement('div');
+          div.className = 'chat-item';
+          div.innerHTML = `
+            <div class="chat-item-main">
+              <img src="${group.icon || DEFAULT_AVATAR}" class="msg-avatar">
+              <div class="chat-item-name">${group.name}</div>
+            </div>
+          `;
+          div.onclick = () => selectChat(groupId, group.name, 'group', group.createdBy, group.members, group.banned, group.muted, group.roles);
+          list.appendChild(div);
+        });
+      });
+    }
+
+    window.closeModal = (id) => document.getElementById(id).style.display = 'none';
+  </script>
+</body>
+</html>
